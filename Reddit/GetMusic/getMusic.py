@@ -1,13 +1,43 @@
+import json
 import praw
+import re
 
+configfile = "subredditconfig.json"
+# TODO - filter out playlist posts, save for later
+# TODO - can use only certain genres
 class MusicSubmission:
-	def __init__(self,title,artist,url,genre=None,service=None,uid=None):
-		self.title = title
-		self.artist = artist
-		self.url = url
-		self.genre = genre
-		self.service = service
-		self.uid = uid
+	def __init__(self,subreddit,submission):
+		config = json.load(open(configfile,"r"))[subreddit]
+		self.parse_title(submission['title'],config)
+	def __str__(self):
+		str = ("Title : {}\nArtist : {}\n".format(self.title,self.artist))
+		if self.genre is not None:
+			str+=("Genre : {}\n".format(self.genre))
+		return str
+	def parse_title(self,title,config):
+		regexexp = re.compile(config['regex']['expression'])
+		groups = config['regex']['groups']
+		try:
+			match = re.match(regexexp,title)
+			title = match.group('title')
+			artist = match.group('artist')
+			if 'genre' in groups:
+				genre = match.group('genre')
+			else:
+				genre = None	# TODO search for genre somehow
+			self.title = title
+			self.artist = artist
+			self.genre = genre
+		except AttributeError:
+			print("No match for :",title)
+			self.title = None
+			self.artist = None
+			self.genre = None
+
+	# def parse_url(self,)
+	# 	self.url = url
+	# 	self.spotifyuri = service
+	# 	self.youtubeuri = uid
 
 def getSubmissions(subreddit,mode="new",number=None,time_since=None):
 	"""
@@ -47,3 +77,8 @@ def getSubmissions(subreddit,mode="new",number=None,time_since=None):
 
 	return ret
 
+if __name__ == '__main__':
+	submissions = getSubmissions('listentothis',number=10)
+	for sub in submissions:
+		m = MusicSubmission('listentothis',sub)
+		print(str(m))

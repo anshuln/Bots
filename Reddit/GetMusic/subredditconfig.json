@@ -1,0 +1,14 @@
+{
+  "listentothis": {
+    "regex": {
+      "expression": "(?P<artist>[a-zA-Z0-9\\'\\(\\) ]*)(\\-|\\-\\-)(?P<title>[a-zA-Z0-9\\'\\(\\) ]*)\\[(?P<genre>[a-zA-Z0-9\\'\\-\\/\\&\"\\(\\) ]*)\\]",
+      "groups": [
+        "artist",
+        "title",
+        "genre"
+      ]
+    },
+    "time_checked": 12345,
+    "url_only": "False"
+  }
+}
