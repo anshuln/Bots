@@ -2,13 +2,17 @@ import json
 import praw
 import re
 
-configfile = "subredditconfig.json"
+subredditconfigfile = "subredditconfig.json"
+platformconfigfile = "platformconfig.json"
 # TODO - filter out playlist posts, save for later
 # TODO - can use only certain genres
+# TODO refactor for only 1 config file
 class MusicSubmission:
 	def __init__(self,subreddit,submission):
-		config = json.load(open(configfile,"r"))[subreddit]
-		self.parse_title(submission['title'],config)
+		subconfig = json.load(open(subredditconfigfile,"r"))[subreddit]
+		platformconfig = json.load(open(platformconfigfile,"r"))
+		self.parse_title(submission['title'],subconfig)
+		self.parse_url(submission['url'],platformconfig)
 	def __str__(self):
 		str = ("Title : {}\nArtist : {}\n".format(self.title,self.artist))
 		if self.genre is not None:
@@ -34,10 +38,24 @@ class MusicSubmission:
 			self.artist = None
 			self.genre = None
 
-	# def parse_url(self,)
-	# 	self.url = url
-	# 	self.spotifyuri = service
-	# 	self.youtubeuri = uid
+	def parse_url(self,url,config):
+		self.url = url
+		self.spotifyuid = None
+		self.youtubeuid = None
+
+		youtube_regex = re.compile(config['youtube']['regexexp'])
+		spotify_regex = re.compile(config['spotify']['regexexp'])
+
+		ytmatch = re.match(youtube_regex,url)
+		spmatch = re.match(spotify_regex,url)
+
+		if ytmatch is not None:
+			self.youtubeuid = ytmatch.group('uid')
+		elif spmatch is not None:
+			self.spotifyuid = spmatch.groups('uid')
+
+		#TODO may not be able to scrape Spotify, need some other method...
+
 
 def getSubmissions(subreddit,mode="new",number=None,time_since=None):
 	"""
@@ -77,8 +95,3 @@ def getSubmissions(subreddit,mode="new",number=None,time_since=None):
 
 	return ret
 
-if __name__ == '__main__':
-	submissions = getSubmissions('listentothis',number=10)
-	for sub in submissions:
-		m = MusicSubmission('listentothis',sub)
-		print(str(m))

@@ -1,0 +1,8 @@
+{
+	"youtube" : {
+		"regexexp" : "https:\\/\\/(www\\.youtube\\.com\\/watch\\?v\\=|youtu\\.be\/)(?P<uid>.*)" 
+	},
+	"spotify" : {
+		"regexexp" : "https:\\/\\/open\\.spotify\\.com\/(album|track)\/(?P<uid>[a-zA-Z0-9]*)"
+	}
+}
