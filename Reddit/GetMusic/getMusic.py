@@ -1,9 +1,11 @@
 import json
 import praw
 import re
+import requests
 
 subredditconfigfile = "subredditconfig.json"
 platformconfigfile = "platformconfig.json"
+userconfigfile = "userconfig.json"	#Contains secret identities
 # TODO - filter out playlist posts, save for later
 # TODO - can use only certain genres
 # TODO refactor for only 1 config file
@@ -18,7 +20,7 @@ class MusicSubmission:
 		if self.genre is not None:
 			str+=("Genre : {}\n".format(self.genre))
 		return str
-	def parse_title(self,title,config):
+	def parse_title(self,title,config):		#TODO refactor to get this information from url
 		regexexp = re.compile(config['regex']['expression'])
 		groups = config['regex']['groups']
 		try:
@@ -37,6 +39,17 @@ class MusicSubmission:
 			self.title = None
 			self.artist = None
 			self.genre = None
+	def set_youtube_uid(self,apikey):
+		search_query = '{}+by+{}'.format(self.title,self.artist).strip().replace(' ','+')
+		print(search_query)
+		search_url = 'https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=1&q={}&key={}'.format(search_query,apikey) 
+		result_json = requests.get(search_url,headers={'content-type': 'application/json'}).json()
+		id = result_json['items'][0]['id']	#TODO explain this line, may have to remove the hardcoding
+		if id['kind'] != 'youtube#video':
+			self.youtubeuid = None	#TODO fix this
+			print("Currently we only support songs, not albums")
+		else:
+			self.youtubeuid = id['videoId']
 
 	def parse_url(self,url,config):
 		self.url = url
@@ -53,6 +66,10 @@ class MusicSubmission:
 			self.youtubeuid = ytmatch.group('uid')
 		elif spmatch is not None:
 			self.spotifyuid = spmatch.groups('uid')
+
+		if self.youtubeuid is None:
+			apikey = json.load(open(userconfigfile))['youtube_api_key']
+			self.set_youtube_uid(apikey)
 
 		#TODO may not be able to scrape Spotify, need some other method...
 
@@ -95,3 +112,9 @@ def getSubmissions(subreddit,mode="new",number=None,time_since=None):
 
 	return ret
 
+if __name__ == "__main__":
+	a = getSubmissions('listentothis',number=5)
+	for j in a:
+		m = MusicSubmission('listentothis',j)
+		print(str(m))
+		print(m.youtubeuid)
