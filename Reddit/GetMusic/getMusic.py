@@ -2,6 +2,7 @@ import json
 import praw
 import re
 import requests
+import time
 
 subredditconfigfile = "subredditconfig.json"
 platformconfigfile = "platformconfig.json"
@@ -51,6 +52,26 @@ class MusicSubmission:
 		else:
 			self.youtubeuid = id['videoId']
 
+	def set_spotify_uid(self,apikey):
+		search_query = 'q={} by {}&type=track'.format(self.title,self.artist).strip().replace(' ','+')	#TODO experiment with artist name etc	
+		search_url = "https://api.spotify.com/v1/search?{}&limit=1".format(search_query)
+		token = get_spotify_token(apikey)
+		headers = {"Authorization":"Bearer {}".format(token)}
+		result_json = requests.get(search_url,headers=headers).json()
+		try:
+			self.spotifyuid = result_json['tracks']['items'][0]['id']	#TODO error handling
+		except:
+			search_query = 'q={}&type=track'.format(self.title).strip().replace(' ','+')
+			search_url = "https://api.spotify.com/v1/search?{}&limit=1".format(search_query)
+			result_json = requests.get(search_url,headers=headers).json()
+			try:
+				self.spotifyuid = result_json['tracks']['items'][0]['id']	#TODO error handling
+			except:
+				print("No results for {}".format(self.title))
+				print(search_url)
+				print(result_json)
+
+
 	def parse_url(self,url,config):
 		self.url = url
 		self.spotifyuid = None
@@ -71,7 +92,28 @@ class MusicSubmission:
 			apikey = json.load(open(userconfigfile))['youtube_api_key']
 			self.set_youtube_uid(apikey)
 
-		#TODO may not be able to scrape Spotify, need some other method...
+		if self.spotifyuid is None:
+			apikey = json.load(open(userconfigfile))['youtube_api_key']
+			self.set_spotify_uid(apikey)
+
+		#TODO parse provided URL to set artist, title etc.
+
+def get_spotify_token(apikey):	#apikey is base64
+	userdict = json.load(open(userconfigfile,"r"))
+	last_time = userdict['spotify']['access_token']['timestamp']
+	if time.time() - last_time < 3600:	# Access tokens valid for 3600 s, TODO remove hard coding
+		return userdict['spotify']['access_token']['token']
+	token_url = "https://accounts.spotify.com/api/token"
+	data = {"grant_type" : "client_credentials"}
+	headers = {"Authorization" : "Basic {}".format(apikey)}
+	response = requests.post(token_url,data=data,headers=headers)
+	token = response.json()['access_token']	#TODO error handling
+	userdict['spotify']['access_token']['token'] = token
+	userdict['spotify']['access_token']['timestamp'] = time.time()
+	json.dump(userdict,open(userconfigfile,"w"))
+	return token
+
+
 
 
 def getSubmissions(subreddit,mode="new",number=None,time_since=None):
@@ -112,9 +154,3 @@ def getSubmissions(subreddit,mode="new",number=None,time_since=None):
 
 	return ret
 
-if __name__ == "__main__":
-	a = getSubmissions('listentothis',number=5)
-	for j in a:
-		m = MusicSubmission('listentothis',j)
-		print(str(m))
-		print(m.youtubeuid)
