@@ -104,14 +104,30 @@ def get_spotify_token(apikey):	#apikey is base64
 	if time.time() - last_time < 3600:	# Access tokens valid for 3600 s, TODO remove hard coding
 		return userdict['spotify']['access_token']['token']
 	token_url = "https://accounts.spotify.com/api/token"
-	data = {"grant_type" : "client_credentials"}
+	data = {"grant_type" : "refresh_token", "refresh_token":userdict['spotify']['access_token']['refresh_token']}
 	headers = {"Authorization" : "Basic {}".format(apikey)}
 	response = requests.post(token_url,data=data,headers=headers)
+	print(response.json())
 	token = response.json()['access_token']	#TODO error handling
 	userdict['spotify']['access_token']['token'] = token
 	userdict['spotify']['access_token']['timestamp'] = time.time()
 	json.dump(userdict,open(userconfigfile,"w"))
 	return token
+
+def deleteAllTracksSpotify(apikey,playlisturi):
+	token = get_spotify_token(apikey)
+	request_url = "https://api.spotify.com/v1/playlists/{}/tracks".format(playlisturi)
+	headers = {"Authorization":"Bearer {}".format(token),"Accept": "application/json"}
+	result_json = requests.get(request_url,headers=headers).json()
+	tracks = [x['track']['id'] for x in result_json["items"]]
+	if len(tracks):
+		delete_url = "https://api.spotify.com/v1/playlists/{}/tracks".format(playlisturi)
+		delete_data = {"tracks":[{"uri":"spotify:track:{}".format(id)} for id in tracks]}
+		headers['Content-Type'] = "application/json"
+		j = requests.delete(delete_url,json=delete_data,headers=headers)	
+		print(j.json())
+	else:
+		print("Playlist was empty")
 
 
 
@@ -154,3 +170,6 @@ def getSubmissions(subreddit,mode="new",number=None,time_since=None):
 
 	return ret
 
+if __name__ == "__main__":
+	userconfig = json.load(open(userconfigfile,"r"))
+	deleteAllTracksSpotify(userconfig['spotify']['api_key'],userconfig['spotify']['playlists']['listentothis'])
