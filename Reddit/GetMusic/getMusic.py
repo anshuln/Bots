@@ -53,6 +53,8 @@ class MusicSubmission:
 			self.youtubeuid = id['videoId']
 
 	def set_spotify_uid(self,apikey):
+		if self.title is None:
+			return	#TODO fix this
 		search_query = 'q={} by {}&type=track'.format(self.title,self.artist).strip().replace(' ','+')	#TODO experiment with artist name etc	
 		search_url = "https://api.spotify.com/v1/search?{}&limit=1".format(search_query)
 		token = get_spotify_token(apikey)
@@ -86,7 +88,7 @@ class MusicSubmission:
 		if ytmatch is not None:
 			self.youtubeuid = ytmatch.group('uid')
 		elif spmatch is not None:
-			self.spotifyuid = spmatch.groups('uid')
+			self.spotifyuid = spmatch.group('uid')
 
 		if self.youtubeuid is None:
 			apikey = json.load(open(userconfigfile))['youtube_api_key']
@@ -125,11 +127,21 @@ def deleteAllTracksSpotify(apikey,playlisturi):
 		delete_data = {"tracks":[{"uri":"spotify:track:{}".format(id)} for id in tracks]}
 		headers['Content-Type'] = "application/json"
 		j = requests.delete(delete_url,json=delete_data,headers=headers)	
-		print(j.json())
+		return j.json()
 	else:
 		print("Playlist was empty")
 
-
+def addTracksSpotify(apikey,playlisturi,MusicSubmissionlist):
+	token = get_spotify_token(apikey)
+	request_url = "https://api.spotify.com/v1/playlists/{}/tracks".format(playlisturi)
+	headers = {"Authorization":"Bearer {}".format(token),"Accept": "application/json"}
+	upload_data = "%2C".join(["spotify%3Atrack%3A{}".format(track.spotifyuid) for track in MusicSubmissionlist if track.spotifyuid is not None])
+	headers['Content-Type'] = "application/json"
+	headers['Content-Type'] = "application/json"
+	print(upload_data)
+	j = requests.post("{}?uris={}".format(request_url,upload_data),headers=headers)	
+	print("Added {} tracks".format(len(MusicSubmissionlist)))
+	return j.json()
 
 
 def getSubmissions(subreddit,mode="new",number=None,time_since=None):
@@ -172,4 +184,9 @@ def getSubmissions(subreddit,mode="new",number=None,time_since=None):
 
 if __name__ == "__main__":
 	userconfig = json.load(open(userconfigfile,"r"))
-	deleteAllTracksSpotify(userconfig['spotify']['api_key'],userconfig['spotify']['playlists']['listentothis'])
+	subs = getSubmissions('listentothis',number=10)
+	MSlist = []
+	for sub in subs:
+		MS = MusicSubmission('listentothis',sub)
+		MSlist.append(MS)
+	print(addTracksSpotify(userconfig['spotify']['api_key'],userconfig['spotify']['playlists']['listentothis'],MSlist))
