@@ -42,7 +42,6 @@ class MusicSubmission:
 			self.genre = None
 	def set_youtube_uid(self,apikey):
 		search_query = '{}+by+{}'.format(self.title,self.artist).strip().replace(' ','+')
-		print(search_query)
 		search_url = 'https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=1&q={}&key={}'.format(search_query,apikey) 
 		result_json = requests.get(search_url,headers={'content-type': 'application/json'}).json()
 		id = result_json['items'][0]['id']	#TODO explain this line, may have to remove the hardcoding
@@ -52,25 +51,26 @@ class MusicSubmission:
 		else:
 			self.youtubeuid = id['videoId']
 
-	def set_spotify_uid(self,apikey):
+	def set_spotify_uid(self):
+		# TODO should this go in SpotifyInterface
 		if self.title is None:
 			return	#TODO fix this
-		search_query = 'q={} by {}&type=track'.format(self.title,self.artist).strip().replace(' ','+')	#TODO experiment with artist name etc	
+		search_query = 'q={} {}&type=track'.format(self.title,self.artist).strip().replace(' ','+')	#TODO experiment with artist name etc	
 		search_url = "https://api.spotify.com/v1/search?{}&limit=1".format(search_query)
-		token = get_spotify_token(apikey)
+		sp = SpotifyInterface()
+		token = sp.get_token()
 		headers = {"Authorization":"Bearer {}".format(token)}
 		result_json = requests.get(search_url,headers=headers).json()
 		try:
-			self.spotifyuid = result_json['tracks']['items'][0]['id']	#TODO error handling
+			self.spotifyuid = "track:{}".format(result_json['tracks']['items'][0]['id'])	#TODO error handling
 		except:
 			search_query = 'q={}&type=track'.format(self.title).strip().replace(' ','+')
 			search_url = "https://api.spotify.com/v1/search?{}&limit=1".format(search_query)
 			result_json = requests.get(search_url,headers=headers).json()
 			try:
-				self.spotifyuid = result_json['tracks']['items'][0]['id']	#TODO error handling
+				self.spotifyuid = "track:{}".format(result_json['tracks']['items'][0]['id'])	#TODO error handling
 			except:
 				print("No results for {}".format(self.title))
-				print(search_url)
 				print(result_json)
 
 
@@ -88,60 +88,62 @@ class MusicSubmission:
 		if ytmatch is not None:
 			self.youtubeuid = ytmatch.group('uid')
 		elif spmatch is not None:
-			self.spotifyuid = spmatch.group('uid')
+			self.spotifyuid = spmatch.group('uid').replace("/",":")
 
 		if self.youtubeuid is None:
 			apikey = json.load(open(userconfigfile))['youtube_api_key']
 			self.set_youtube_uid(apikey)
 
 		if self.spotifyuid is None:
-			apikey = json.load(open(userconfigfile))['youtube_api_key']
-			self.set_spotify_uid(apikey)
+			self.set_spotify_uid()
 
 		#TODO parse provided URL to set artist, title etc.
+class SpotifyInterface():
+	def __init__(self,userconfigfile=userconfigfile):
+		userdict = json.load(open(userconfigfile,"r"))
+		self.userconfigfile = userconfigfile
+		self.apikey = userdict['spotify']['api_key']
 
-def get_spotify_token(apikey):	#apikey is base64
-	userdict = json.load(open(userconfigfile,"r"))
-	last_time = userdict['spotify']['access_token']['timestamp']
-	if time.time() - last_time < 3600:	# Access tokens valid for 3600 s, TODO remove hard coding
-		return userdict['spotify']['access_token']['token']
-	token_url = "https://accounts.spotify.com/api/token"
-	data = {"grant_type" : "refresh_token", "refresh_token":userdict['spotify']['access_token']['refresh_token']}
-	headers = {"Authorization" : "Basic {}".format(apikey)}
-	response = requests.post(token_url,data=data,headers=headers)
-	print(response.json())
-	token = response.json()['access_token']	#TODO error handling
-	userdict['spotify']['access_token']['token'] = token
-	userdict['spotify']['access_token']['timestamp'] = time.time()
-	json.dump(userdict,open(userconfigfile,"w"))
-	return token
+	def get_token(self):	#apikey is base64
+		userdict = json.load(open(self.userconfigfile,"r"))
+		last_time = userdict['spotify']['access_token']['timestamp']
+		if time.time() - last_time < 3600:	# Access tokens valid for 3600 s, TODO remove hard coding
+			return userdict['spotify']['access_token']['token']
+		token_url = "https://accounts.spotify.com/api/token"
+		data = {"grant_type" : "refresh_token", "refresh_token":userdict['spotify']['access_token']['refresh_token']}
+		headers = {"Authorization" : "Basic {}".format(self.apikey)}
+		response = requests.post(token_url,data=data,headers=headers)
+		token = response.json()['access_token']	#TODO error handling
+		userdict['spotify']['access_token']['token'] = token
+		userdict['spotify']['access_token']['timestamp'] = time.time()
+		json.dump(userdict,open(self.userconfigfile,"w"))
+		return token
 
-def deleteAllTracksSpotify(apikey,playlisturi):
-	token = get_spotify_token(apikey)
-	request_url = "https://api.spotify.com/v1/playlists/{}/tracks".format(playlisturi)
-	headers = {"Authorization":"Bearer {}".format(token),"Accept": "application/json"}
-	result_json = requests.get(request_url,headers=headers).json()
-	tracks = [x['track']['id'] for x in result_json["items"]]
-	if len(tracks):
-		delete_url = "https://api.spotify.com/v1/playlists/{}/tracks".format(playlisturi)
-		delete_data = {"tracks":[{"uri":"spotify:track:{}".format(id)} for id in tracks]}
+	def deleteAllTracks(self,playlisturi):
+		token = self.get_token()
+		request_url = "https://api.spotify.com/v1/playlists/{}/tracks".format(playlisturi)
+		headers = {"Authorization":"Bearer {}".format(token),"Accept": "application/json"}
+		result_json = requests.get(request_url,headers=headers).json()
+		tracks = [x['track']['id'] for x in result_json["items"]]
+		if len(tracks):
+			delete_url = "https://api.spotify.com/v1/playlists/{}/tracks".format(playlisturi)
+			delete_data = {"tracks":[{"uri":"spotify:track:{}".format(id)} for id in tracks]}
+			headers['Content-Type'] = "application/json"
+			j = requests.delete(delete_url,json=delete_data,headers=headers)	
+			return j.json()
+		else:
+			print("Playlist was empty")
+
+	def addTracks(self,playlisturi,MusicSubmissionlist):
+		token = self.get_token()
+		request_url = "https://api.spotify.com/v1/playlists/{}/tracks".format(playlisturi)
+		headers = {"Authorization":"Bearer {}".format(token),"Accept": "application/json"}
+		upload_data = "%2C".join(["spotify:{}".format(track.spotifyuid).replace(":","%3A") for track in MusicSubmissionlist if track.spotifyuid is not None])
 		headers['Content-Type'] = "application/json"
-		j = requests.delete(delete_url,json=delete_data,headers=headers)	
+		headers['Content-Type'] = "application/json"
+		j = requests.post("{}?uris={}".format(request_url,upload_data),headers=headers)	
+		print("Added {} tracks".format(len(upload_data.split("%2C"))))
 		return j.json()
-	else:
-		print("Playlist was empty")
-
-def addTracksSpotify(apikey,playlisturi,MusicSubmissionlist):
-	token = get_spotify_token(apikey)
-	request_url = "https://api.spotify.com/v1/playlists/{}/tracks".format(playlisturi)
-	headers = {"Authorization":"Bearer {}".format(token),"Accept": "application/json"}
-	upload_data = "%2C".join(["spotify%3Atrack%3A{}".format(track.spotifyuid) for track in MusicSubmissionlist if track.spotifyuid is not None])
-	headers['Content-Type'] = "application/json"
-	headers['Content-Type'] = "application/json"
-	print(upload_data)
-	j = requests.post("{}?uris={}".format(request_url,upload_data),headers=headers)	
-	print("Added {} tracks".format(len(MusicSubmissionlist)))
-	return j.json()
 
 
 def getSubmissions(subreddit,mode="new",number=None,time_since=None):
@@ -154,6 +156,11 @@ def getSubmissions(subreddit,mode="new",number=None,time_since=None):
 	"""
 	# TODO allow non-UTC time 
 	redditgettor = praw.Reddit('GetMusicBot')
+	#Updating time checked
+	s = json.load(open(subredditconfigfile,"r"))
+	time_since = s[subreddit]['time_checked']
+	s[subreddit]['time_checked'] = time.time()
+	json.dump(s,open(subredditconfigfile,"w"))
 	if time_since is not None:
 		mode = "new"
 	if mode == "new":
@@ -182,11 +189,18 @@ def getSubmissions(subreddit,mode="new",number=None,time_since=None):
 
 	return ret
 
-if __name__ == "__main__":
+def main(subreddit):
 	userconfig = json.load(open(userconfigfile,"r"))
-	subs = getSubmissions('listentothis',number=10)
+	subs = getSubmissions(subreddit)
 	MSlist = []
 	for sub in subs:
-		MS = MusicSubmission('listentothis',sub)
+		MS = MusicSubmission(subreddit,sub)
 		MSlist.append(MS)
-	print(addTracksSpotify(userconfig['spotify']['api_key'],userconfig['spotify']['playlists']['listentothis'],MSlist))
+	sp = SpotifyInterface()
+	print(sp.deleteAllTracks(userconfig['spotify']['playlists'][subreddit]))
+	print(sp.addTracks(userconfig['spotify']['playlists'][subreddit],MSlist))
+
+if __name__ == "__main__":
+	subredditlist = json.load(open(userconfigfile,"r"))['subredditlist']
+	for s in subredditlist:
+		main(s)
