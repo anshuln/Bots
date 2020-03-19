@@ -119,6 +119,7 @@ def extract_messages(text):
 		q.update_db(cursor)
 
 	sqliteConnection.commit()
+	sqliteConnection.close()
 
 # text = open(FILENAME,"r").read()
 # print(text)

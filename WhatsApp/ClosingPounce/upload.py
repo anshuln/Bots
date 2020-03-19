@@ -23,6 +23,7 @@ class Slides_uploader():
 			self.service = build('slides', 'v1', credentials=self.creds)
 
 	def upload_question(self,qnumber,message,user):
+		#Todo add answer slide
 		titleId = gen_uuid()
 		bodyId  = gen_uuid()
 		requests = [
@@ -53,7 +54,7 @@ class Slides_uploader():
 			{
 			"insertText": {
 			        "objectId": titleId,
-			        "text": "{}, set by {}".format(qnumber,user),
+			        "text": "{}. <set by {}>".format(qnumber,user.split()[0]),
 			    }
 
 			},
