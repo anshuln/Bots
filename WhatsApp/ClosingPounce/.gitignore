@@ -1,4 +1,4 @@
 *.txt
 *.pickle
-*.json
+credentials.json
 *.db

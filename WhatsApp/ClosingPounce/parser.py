@@ -5,8 +5,9 @@
 #        4. Upload to required thing -- DONE for slides
 #        5. Write a driver file -- Almost DONE
 #        6. Put stuff in a db -- DONE
-#        7. Scrape whatsapp in a different way
+#        7. Scrape whatsapp in a different way -- DONE
 #		 8. Handle questions spanninng multiple messages -- DONE
+#        9. Extract answers
 FILENAME = 'messages.txt'
 DB       = 'questions.sqlite'
 # NUMBER   = 1
@@ -16,8 +17,6 @@ import sqlite3
 import datetime
 
 class Question():
-	#TODO get max question number
-	#TODO init from database
 	number = 0
 	def __init__(self,match):
 		self.date     = datetime.datetime(int(match.group('year')),int(match.group('month')),int(match.group('day')),int(match.group('hour')),int(match.group('minute'))).timestamp()
@@ -32,7 +31,7 @@ class Question():
 		split = self.message.split()
 		split = [x.lower() for x in split] 
 		if self.date < max_time:
-			#The record is already in the database if its time is less
+			#The record is already in the database if its time is less than max_time
 			return False
 		if 'quiz' in split or 'quizzes' in split: #or 'team' in split:
 			return False
@@ -91,8 +90,6 @@ def extract_messages(text):
 		q = Question(m)
 		if len(msg_stack) == 0:
 			if q.is_valid(max_time):
-				# print(str(q))
-				# print("\n______\n")
 				Question.number += 1
 				msg_stack.append(q)
 			else:
@@ -107,8 +104,6 @@ def extract_messages(text):
 				msg_stack[-1].update_db(cursor)
 				msg_stack.pop()
 				if q.is_valid(max_time):
-					# print(str(q))
-					# print("\n______\n")
 					Question.number += 1
 					msg_stack.append(q)
 				else:

@@ -26,8 +26,10 @@ if __name__ == "__main__":
 
 	args = parser.parse_args()
 
+	config = json.load(open(CONFIG,"r"))
+
 	if args.email:
-		scrape_email()
+		scrape_email(config['msg_file'])
 	if args.parse:
 		text = open(args.file,"r").read()
 		# print(text)
@@ -36,7 +38,6 @@ if __name__ == "__main__":
 	con = sqlite3.connect("questions.db")
 	con.row_factory = dict_factory
 	cursor = con.cursor()
-	config = json.load(open(CONFIG,"r"))
 	if args.upload:
 		uploader = Slides_uploader(presentation_id=config['presentation_id'])
 		# TODO argparse to control what all to do, between scraping, uploading etc.
