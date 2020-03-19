@@ -3,7 +3,7 @@
 #        2. Decide if they are questions -- DONE
 #        3. Save into an object with timestamp, author, question number and                     question, with a pretty printer function -- DONE
 #        4. Upload to required thing -- DONE for slides
-#        5. Write a driver file
+#        5. Write a driver file -- Almost DONE
 #        6. Put stuff in a db -- DONE
 #        7. Scrape whatsapp in a different way
 #		 8. Handle questions spanninng multiple messages -- DONE
@@ -14,8 +14,6 @@ DB       = 'questions.sqlite'
 import re
 import sqlite3
 import datetime
-
-from upload import Slides_uploader
 
 class Question():
 	#TODO get max question number
@@ -71,9 +69,16 @@ def extract_messages(text):
 
 	NUMBER = cursor.fetchall()[0][0]
 
+	if NUMBER is None:
+		NUMBER = 0
+
 	Question.number = NUMBER + 1
+
 	cursor.execute('''select max(Timestamp) from questions''')
+	
 	max_time = cursor.fetchall()[0][0]
+	if max_time is None:
+		max_time = 0
 
 	file = open("Rejects.txt","w")
 
@@ -115,6 +120,6 @@ def extract_messages(text):
 
 	sqliteConnection.commit()
 
-text = open(FILENAME,"r").read()
+# text = open(FILENAME,"r").read()
 # print(text)
-extract_messages(text)
+# extract_messages(text)

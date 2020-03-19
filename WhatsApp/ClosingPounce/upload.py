@@ -22,7 +22,7 @@ class Slides_uploader():
 			self.presentation_id = presentation_id
 			self.service = build('slides', 'v1', credentials=self.creds)
 
-	def upload_question(self,qnumber,message):
+	def upload_question(self,qnumber,message,user):
 		titleId = gen_uuid()
 		bodyId  = gen_uuid()
 		requests = [
@@ -53,7 +53,7 @@ class Slides_uploader():
 			{
 			"insertText": {
 			        "objectId": titleId,
-			        "text": "{}".format(qnumber),
+			        "text": "{}, set by {}".format(qnumber,user),
 			    }
 
 			},
@@ -87,7 +87,7 @@ def upload_all(cursor,uploader,max_num):
 	for row in cursor.fetchall():
 		try:	
 			#Google sometimes blocks requests
-			uploader.upload_question(row["Number"],row["Question"])
+			uploader.upload_question(row["Number"],row["Question"],row["QM"])
 		except:
 			print("API refused connection with number {}".format(max_num))
 			return max_num
