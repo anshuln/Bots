@@ -9,28 +9,33 @@
 #		 8. Handle questions spanninng multiple messages -- DONE
 FILENAME = 'messages.txt'
 DB       = 'questions.sqlite'
-NUMBER   = 1
+# NUMBER   = 1
+
 import re
 import sqlite3
+import datetime
+
 from upload import Slides_uploader
 
 class Question():
 	#TODO get max question number
 	#TODO init from database
-	number = NUMBER
+	number = 0
 	def __init__(self,match):
-		self.date     = match.group('date')
-		self.time  	  = match.group('time')
+		self.date     = datetime.datetime(int(match.group('year')),int(match.group('month')),int(match.group('day')),int(match.group('hour')),int(match.group('minute'))).timestamp()
+		# self.time  	  = match.group('time')
 		self.QM  	  = match.group('QM')
 		self.message  = match.group('message')
 		self.qnumber  = Question.number
 
-	def is_valid(self):
+	def is_valid(self,max_time):
 		#Returns true if the message is a question
 		# TODO get better heuristics
 		split = self.message.split()
 		split = [x.lower() for x in split] 
-
+		if self.date < max_time:
+			#The record is already in the database if its time is less
+			return False
 		if 'quiz' in split or 'quizzes' in split: #or 'team' in split:
 			return False
 
@@ -43,14 +48,14 @@ class Question():
 		return False
 	def __str__(self):
 		#TODO add different stringers for MD, HTML, blogs etc
-		string = "Number:{}\nDate:{}\nTime:{}\nUser:{}\nMessage:{}\n".format(self.qnumber,self.date,self.time,self.QM,self.message)
+		string = "Number:{}\ntimestamp:{}\nUser:{}\nMessage:{}\n".format(self.qnumber,self.date,self.QM,self.message)
 		return string
 
 	def update_db(self,cursor):
 		sqlite_insert_with_param = """INSERT INTO 'questions'
-		                          ('Number','Date','Time','QM','Question') 
-		                          VALUES (?, ?, ?,?,?);"""
-		data = (self.qnumber,self.date,self.time,self.QM,self.message)	
+		                          ('Number','Timestamp','QM','Question') 
+		                          VALUES (?, ?, ?, ?);"""
+		data = (self.qnumber,self.date,self.QM,self.message)	
 		cursor.execute(sqlite_insert_with_param, data)
 
 	def update_question(self,regex):
@@ -62,11 +67,17 @@ def extract_messages(text):
 	''' 
 	sqliteConnection = sqlite3.connect('questions.db')
 	cursor = sqliteConnection.cursor()
+	cursor.execute('''select max(Number) from questions''')
 
-	# sl = Slides_uploader(presentation_id)
-	Question.number = NUMBER 
+	NUMBER = cursor.fetchall()[0][0]
+
+	Question.number = NUMBER + 1
+	cursor.execute('''select max(Timestamp) from questions''')
+	max_time = cursor.fetchall()[0][0]
+
 	file = open("Rejects.txt","w")
-	regex_pattern = re.compile(r'^(?P<date>\d{2}\/\d{2}\/\d{4})\, (?P<time>\d{2}\:\d{2}) \- (?P<QM>[\w\+ ]+)\: (?P<message>[\s\S]+?)(?=^\d{2}|\Z)',re.MULTILINE)
+
+	regex_pattern = re.compile(r'^(?P<day>\d{2})\/(?P<month>\d{2})\/(?P<year>\d{4})\, (?P<hour>\d{2})\:(?P<minute>\d{2}) \- (?P<QM>[\w\+ ]+)\: (?P<message>[\s\S]+?)(?=^\d{2}|\Z)',re.MULTILINE)
 	
 	messages  = regex_pattern.finditer(text)
 	msg_stack = []	#Stack ensures that multi-message questions are interpreted well enough
@@ -74,7 +85,7 @@ def extract_messages(text):
 	for m in messages:
 		q = Question(m)
 		if len(msg_stack) == 0:
-			if q.is_valid():
+			if q.is_valid(max_time):
 				# print(str(q))
 				# print("\n______\n")
 				Question.number += 1
@@ -90,7 +101,7 @@ def extract_messages(text):
 			else:
 				msg_stack[-1].update_db(cursor)
 				msg_stack.pop()
-				if q.is_valid():
+				if q.is_valid(max_time):
 					# print(str(q))
 					# print("\n______\n")
 					Question.number += 1
@@ -104,6 +115,6 @@ def extract_messages(text):
 
 	sqliteConnection.commit()
 
-# text = open(FILENAME,"r").read()
+text = open(FILENAME,"r").read()
 # print(text)
-# extract_messages(text)
+extract_messages(text)
