@@ -4,6 +4,7 @@ import argparse
 
 from upload import *
 from parser import *
+from scraper import *
 
 DB       = 'questions.sqlite'
 CONFIG   = 'config.json'
@@ -20,10 +21,13 @@ if __name__ == "__main__":
 	parser.add_argument("-p","--parse", help="Parse the input file",action="store_true")
 	parser.add_argument("-f","--file", help="Message file to parse",default="messages.txt")
 	parser.add_argument("-u","--upload", help="Upload questions",action="store_true")
+	parser.add_argument("-e","--email", help="Scrape from email",action="store_true")
 	# parser.add_argument("-e","--epochs",help="Num of epochs",type=int, default=50)
 
 	args = parser.parse_args()
 
+	if args.email:
+		scrape_email()
 	if args.parse:
 		text = open(args.file,"r").read()
 		# print(text)
