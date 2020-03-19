@@ -1,11 +1,12 @@
 #Reads the text file and extracts questions
-#TODOs - 1. Extract messages
-#        2. Decide if they are questions
-#        3. Save into an object with timestamp, author, question number and                     question, with a pretty printer function
+#TODOs - 1. Extract messages -- DONE
+#        2. Decide if they are questions -- DONE
+#        3. Save into an object with timestamp, author, question number and                     question, with a pretty printer function -- DONE
 #        4. Upload to required thing
 FILENAME = 'messages.txt'
 NUMBER   = 1
 import re
+from upload import Slides_uploader
 class Question():
 	number = NUMBER
 	def __init__(self,match):
@@ -31,14 +32,15 @@ class Question():
 		if ('?' in split or 'x' in split or '_' in split or 'named' in split) and len(split)>15:
 			return True  
 		return False
-	def printer(self):
-
-		print("On {}, at {}, {} sent the message {}".format(self.date,self.time,self.QM,self.message))
+	def __str__(self):
+		string = "Number:{}\nDate:{}\nTime:{}\nUser:{}\nMessage:{}\n".format(self.qnumber,self.date,self.time,self.QM,self.message)
+		return string
 
 def extract_messages(text):
 	'''
 	Given a text, extracts all messages into a list of strings
 	''' 
+	sl = Slides_uploader(presentation_id)
 	Question.number = NUMBER 
 	file = open("Rejects.txt","w")
 	regex_pattern = re.compile(r'^(?P<date>\d{2}\/\d{2}\/\d{4})\, (?P<time>\d{2}\:\d{2}) \- (?P<QM>[\w\+ ]+)\: (?P<message>[\s\S]+?)(?=^\d{2}|\Z)',re.MULTILINE)
@@ -51,9 +53,10 @@ def extract_messages(text):
 		# 	printer(m)
 		q = Question(m)
 		if q.is_valid():
-			print(q.number," ",q.message)
+			print(str(q))
 			print("\n______\n")
 			Question.number += 1
+			sl.upload_question(q)
 		else:
 			file.write("\n______\n")
 			file.write(q.message)
