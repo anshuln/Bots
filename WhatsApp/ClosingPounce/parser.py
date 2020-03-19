@@ -6,7 +6,7 @@
 #        5. Write a driver file
 #        6. Put stuff in a db -- DONE
 #        7. Scrape whatsapp in a different way
-#		 8. Handle questions spanninng multiple messages
+#		 8. Handle questions spanninng multiple messages -- DONE
 FILENAME = 'messages.txt'
 DB       = 'questions.sqlite'
 NUMBER   = 1
@@ -103,6 +103,7 @@ def extract_messages(text):
 		q.update_db(cursor)
 
 	sqliteConnection.commit()
-text = open(FILENAME,"r").read()
+
+# text = open(FILENAME,"r").read()
 # print(text)
-extract_messages(text)
+# extract_messages(text)

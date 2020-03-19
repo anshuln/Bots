@@ -2,11 +2,13 @@
 #TODO throttle to limit number of requests
 import json
 import pickle
+import time
+import uuid
+
 from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 
-import uuid
 
 gen_uuid = lambda : str(uuid.uuid4())  # get random UUID string
 class Slides_uploader():
@@ -20,7 +22,7 @@ class Slides_uploader():
 			self.presentation_id = presentation_id
 			self.service = build('slides', 'v1', credentials=self.creds)
 
-	def upload_question(self,question):
+	def upload_question(self,qnumber,message):
 		titleId = gen_uuid()
 		bodyId  = gen_uuid()
 		requests = [
@@ -51,14 +53,14 @@ class Slides_uploader():
 			{
 			"insertText": {
 			        "objectId": titleId,
-			        "text": "{}".format(question.qnumber),
+			        "text": "{}".format(qnumber),
 			    }
 
 			},
 			{
 			"insertText": {
 			        "objectId": bodyId,
-			        "text": "{}".format(question.message),
+			        "text": "{}".format(message),
 			    }
 
 			},
@@ -74,7 +76,22 @@ class Slides_uploader():
 
 
 
-# presentation_id = '1HSdfhNbAkL_wCNuwtmANQXDMgeg2te1LLu_KGMNO-dY'
 
-# sl = Slides_uploader('1HSdfhNbAkL_wCNuwtmANQXDMgeg2te1LLu_KGMNO-dY')
-# sl.upload_question()
+def upload_all(cursor,uploader,max_num):
+	'''
+	Reads records from db, uploads them if the question number is greater than config
+	Returns question number of last question uploaded
+	'''
+	query = '''select * from questions where Number>{}'''.format(max_num)
+	cursor.execute(query)
+	for row in cursor.fetchall():
+		try:	
+			#Google sometimes blocks requests
+			uploader.upload_question(row["Number"],row["Question"])
+		except:
+			print("API refused connection with number {}".format(max_num))
+			return max_num
+		time.sleep(0.02)	#Hack to prevent throttling
+		max_num = max(max_num,row["Number"])
+	return max_num
+
