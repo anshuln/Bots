@@ -6,6 +6,7 @@
 #        5. Write a driver file
 #        6. Put stuff in a db -- DONE
 #        7. Scrape whatsapp in a different way
+#		 8. Handle questions spanninng multiple messages
 FILENAME = 'messages.txt'
 DB       = 'questions.sqlite'
 NUMBER   = 1
@@ -52,6 +53,9 @@ class Question():
 		data = (self.qnumber,self.date,self.time,self.QM,self.message)	
 		cursor.execute(sqlite_insert_with_param, data)
 
+	def update_question(self,regex):
+		self.message += "\n{}".format(regex.group('message'))
+
 def extract_messages(text):
 	'''
 	Given a text, extracts all messages into a list of strings
@@ -63,22 +67,41 @@ def extract_messages(text):
 	Question.number = NUMBER 
 	file = open("Rejects.txt","w")
 	regex_pattern = re.compile(r'^(?P<date>\d{2}\/\d{2}\/\d{4})\, (?P<time>\d{2}\:\d{2}) \- (?P<QM>[\w\+ ]+)\: (?P<message>[\s\S]+?)(?=^\d{2}|\Z)',re.MULTILINE)
-	messages = regex_pattern.finditer(text)
-
+	
+	messages  = regex_pattern.finditer(text)
+	msg_stack = []	#Stack ensures that multi-message questions are interpreted well enough
+	
 	for m in messages:
-		# # printer(m)
-		# # print(m)
-		# if len(m.group('message').split()) > 15:
-		# 	printer(m)
 		q = Question(m)
-		if q.is_valid():
-			print(str(q))
-			print("\n______\n")
-			Question.number += 1
-			q.update_db(cursor)
+		if len(msg_stack) == 0:
+			if q.is_valid():
+				# print(str(q))
+				# print("\n______\n")
+				Question.number += 1
+				msg_stack.append(q)
+			else:
+				file.write("\n______\n")
+				file.write(q.message)
 		else:
-			file.write("\n______\n")
-			file.write(q.message)
+			if msg_stack[-1].QM == q.QM:
+				print("Found one with multiple parts")
+				print(msg_stack[-1].qnumber)
+				msg_stack[-1].update_question(m)
+			else:
+				msg_stack[-1].update_db(cursor)
+				msg_stack.pop()
+				if q.is_valid():
+					# print(str(q))
+					# print("\n______\n")
+					Question.number += 1
+					msg_stack.append(q)
+				else:
+					file.write("\n______\n")
+					file.write(q.message)
+
+	for q in msg_stack:
+		q.update_db(cursor)
+
 	sqliteConnection.commit()
 text = open(FILENAME,"r").read()
 # print(text)
