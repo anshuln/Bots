@@ -1,7 +1,7 @@
 # ClosingPounce
 
 A simple bot that scrapes messages from a WhatsApp chat and stores them to database. 
-The particular use case is to extract quiz questions from a WhatsApp group and host them to a [Google Slides Presentation]().
+The particular use case is to extract quiz questions from a WhatsApp group and host them to a [Google Slides Presentation](https://docs.google.com/presentation/d/1HSdfhNbAkL_wCNuwtmANQXDMgeg2te1LLu_KGMNO-dY/edit?usp=sharing).
 
 ## Setup
 Requirements -

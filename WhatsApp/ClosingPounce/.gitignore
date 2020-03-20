@@ -2,3 +2,4 @@
 *.pickle
 credentials.json
 *.db
+__pycache__/
