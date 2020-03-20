@@ -29,12 +29,12 @@ class Question():
 	def is_valid(self,max_time,mode="default",keyword=None):
 		#Returns true if the message is a question
 		# TODO get better heuristics
+		if self.date < max_time:
+			#The record is already in the database if its time is less than max_time
+			return False
 		split = self.message.split()
 		split = [x.lower() for x in split] 
 		if mode=="default":
-			if self.date < max_time:
-				#The record is already in the database if its time is less than max_time
-				return False
 			if 'quiz' in split or 'quizzes' in split: #or 'team' in split:
 				return False
 
@@ -89,6 +89,7 @@ def extract_messages(text,db,mode,keywordq=None,keyworda=None):
 	if max_time is None:
 		max_time = 0
 
+	print(max_time)
 	file = open("Rejects.txt","w")
 
 	regex_pattern = re.compile(r'^(?P<day>\d{2})\/(?P<month>\d{2})\/(?P<year>\d{4})\, (?P<hour>\d{2})\:(?P<minute>\d{2}) \- (?P<QM>[\w\+ ]+)\: (?P<message>[\s\S]+?)(?=^\d{2}|\Z)',re.MULTILINE)
