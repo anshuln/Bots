@@ -6,7 +6,7 @@ from upload import *
 from parser import *
 from scraper import *
 
-DB       = 'questions.sqlite'
+DB       = 'questions_.db'
 CONFIG   = 'config.json'
 
 def dict_factory(cursor, row):
@@ -33,9 +33,9 @@ if __name__ == "__main__":
 	if args.parse:
 		text = open(args.file,"r").read()
 		# print(text)
-		extract_messages(text)
+		extract_messages(text,config['database'],config['mode'],config['keywordq'],config['keyworda'])
 
-	con = sqlite3.connect("questions.db")
+	con = sqlite3.connect(config['database'])
 	con.row_factory = dict_factory
 	cursor = con.cursor()
 	if args.upload:
