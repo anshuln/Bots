@@ -76,7 +76,7 @@ class Slides_uploader():
 				],
 
 				}
-			},			
+			},          
 			{
 			"insertText": {
 					"objectId": titleIdq,
@@ -90,7 +90,7 @@ class Slides_uploader():
 					"text": "{}".format(message.replace("sphinx","")),
 				}
 
-			},		
+			},      
 			{
 			"insertText": {
 					"objectId": titleIda,

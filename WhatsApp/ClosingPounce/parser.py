@@ -32,8 +32,7 @@ class Question():
 		if self.date < max_time:
 			#The record is already in the database if its time is less than max_time
 			return False
-		split = self.message.split()
-		split = [x.lower() for x in split] 
+		split = self.message.lower().split()
 		if mode=="default":
 			if 'quiz' in split or 'quizzes' in split: #or 'team' in split:
 				return False
@@ -85,7 +84,7 @@ def extract_messages(text,db,mode,keywordq=None,keyworda=None):
 
 	cursor.execute('''select max(Timestamp) from questions''')
 	
-	max_time = cursor.fetchall()[0][0]
+	max_time = cursor.fetchall()[0][0]+1
 	if max_time is None:
 		max_time = 0
 
@@ -112,8 +111,9 @@ def extract_messages(text,db,mode,keywordq=None,keyworda=None):
 					i+=1
 				if i == len(msg_stack)+1:
 					print("No Question Found!")
-					msg_stack[-1].update_db(cursor)
-					msg_stack.pop()
+					print(q.message)
+					# msg_stack[-1].update_db(cursor)
+					# msg_stack.pop()
 				else:
 					msg_stack[-i].answer = q.message
 					# print(msg_stack[-i].message,"\n",msg_stack[-1].answer)
