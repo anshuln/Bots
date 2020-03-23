@@ -2,6 +2,8 @@ import discord
 from discord.ext import commands
 import time
 import asyncio
+# from nltk.stem.snowball import SnowballStemmer
+
 
 bot = commands.Bot(command_prefix='$')
 bot.general_channel = None
@@ -11,10 +13,11 @@ bot.guess = None
 bot.active_clues = []   #Contains list of cluer and clue
 bot.used_words = set()
 bot.num_contacts = 3
-bot.countdown = 15
+bot.countdown = 12
 bot.state = 'clueing'
 bot.contacted_clue = None
 bot.valid_words = []
+
 class Clue:
 	def __init__(self,cluer,clue,word):
 		self.cluer    = cluer
@@ -36,28 +39,35 @@ async def on_ready():
 async def check_contact():
 	while True:
 		if bot.state == 'clueing' or bot.contacted_clue is None:
-			bot.countdown = 15
+			bot.countdown = 12
 			bot.contacted_clue = None
 			await asyncio.sleep(2)
 		else:
-			if bot.countdown >= 0:
+			if bot.countdown > 0:
 				bot.countdown -= 2
 				await bot.general_channel.send("Countdown running for clue {}.\n TIK TIK {}".format(bot.contacted_clue,bot.countdown))
 				await asyncio.sleep(2)
 			else:
 				correct = True
-				embed = discord.Embed(title="Guesses for clue {}".format(bot.contacted_clue))
+				contacted_clue = bot.contacted_clue
+				embed = discord.Embed(title="Guesses for clue {}".format(contacted_clue))
 				for con in bot.active_clues[int(contacted_clue)-1].contacts.keys():
 					embed.add_field(name=con,value=bot.active_clues[int(contacted_clue)-1].contacts[con])
 					bot.used_words.add(bot.active_clues[int(contacted_clue)-1].contacts[con])
 					correct = correct and (bot.active_clues[int(contacted_clue)-1].contacts[con] == bot.active_clues[int(contacted_clue)-1].word)
+				bot.used_words.add(bot.active_clues[int(contacted_clue)-1].word)
+				embed.add_field(name="Actual Word",value=bot.active_clues[int(contacted_clue)-1].word)
 				await bot.general_channel.send(embed=embed)
 				bot.state = 'clueing'
 				bot.countdown = 15
-				bot.active_clues = []
 				if correct:
+					bot.active_clues = []
 					bot.guess = bot.word[:len(bot.guess)+1]
 					await bot.general_channel.send("{} failed to guess! Current guess is {}".format(bot.giver,bot.guess))
+				else:
+					bot.active_clues.pop(int(contacted_clue)-1)
+					await bot.general_channel.send("All guesses don't match! Tough one")
+
 
 @bot.command()
 async def user(ctx):
@@ -107,7 +117,7 @@ async def clue(ctx,word,*args):
 	#TODO uncomment lines below
 	if bot.giver == ctx.author:
 		await ctx.send("You can't clue on your own word!")
-	if not isinstance(ctx.message.channel,discord.DMChannel):
+	elif not isinstance(ctx.message.channel,discord.DMChannel):
 		await ctx.send("DM me to give a clue!")
 	elif bot.word is None:
 		await ctx.send("No word in play")
@@ -138,12 +148,25 @@ async def guess(ctx,clue,word):
 		bot.used_words.add(word)
 		message = "{} has guessed {} for clue {} ".format(ctx.author,word,clue)
 		if bot.active_clues[int(clue)-1].word == word:
-			if bot.state=='countdown' and clue == bot.contacted_clue:
+			bot.active_clues.pop(int(clue)-1)
+			if bot.word == word:
+				giver = bot.giver
+				bot.giver = None
+				bot.word = None
+				bot.guess = None
+				bot.active_clues = []   #Contains list of cluer and clue
+				bot.used_words = set()
+				bot.num_contacts = 3
+				bot.countdown = 12
+				bot.state = 'clueing'
+				bot.contacted_clue = None
+				bot.valid_words = []
+				await bot.general_channel.send("And {}'s word was {}! GG! ".format(giver,word))				
+			elif bot.state=='countdown' and clue == bot.contacted_clue:
 				bot.contacted_clue = None
 				bot.state = 'clueing'
-				bot.countdown = 15
+				bot.countdown = 12
 				# print("HURRAH")
-			bot.active_clues.pop(int(clue)-1)
 			message += "correctly"
 		await bot.general_channel.send(message)
 
@@ -159,7 +182,7 @@ async def contact(ctx,clue,word):
 		await ctx.send("Only non-word giver can contact for clues. Use $guess instead")
 	elif ctx.author == bot.active_clues[int(clue)-1].cluer:
 		await ctx.send("You can't contact on your own clue!")
-	if int(clue) > len(bot.active_clues):
+	elif int(clue) > len(bot.active_clues):
 		await ctx.send("Enter a valid clue number")
 	elif not isinstance(ctx.message.channel,discord.DMChannel):
 		await ctx.send("Contact on DM!")
@@ -173,17 +196,19 @@ async def contact(ctx,clue,word):
 			bot.contacted_clue = clue
 			await bot.general_channel.send("There are now enough contacts for clue {}. Starting countdown".format(clue))
 
-
+#TODO add command to 
 bot.remove_command('help')
 
 @bot.command()
 async def status(ctx):
-	embed = discord.Embed(title="The current status of the game is", description="The word giver is {}. The current guess is {}".format(bot.giver,bot.guess), color=0xeee657)
+	embed = discord.Embed(title="The current status of the game is", description="The word giver is {}. The current guess is *{}*".format(bot.giver,bot.guess), color=0xeee657)
 	for i in range(len(bot.active_clues)):
 		embed.add_field(name="{}.".format(i+1),value=str(bot.active_clues[i]),inline=False)
-	await bot.general_channel.send(embed=embed)
+	await ctx.send(embed=embed)
 
-
+@bot.command()
+async def info(ctx):
+	await ctx.send("I have not implemented this yet...... :(")
 @bot.command()
 async def help(ctx):
 	embed = discord.Embed(title="contact bot", description="A Bot which helps play contact. List of commands are:", color=0xeee657)
