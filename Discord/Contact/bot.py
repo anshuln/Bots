@@ -59,7 +59,7 @@ async def check_contact():
 				embed.add_field(name="Actual Word",value=bot.active_clues[int(contacted_clue)-1].word)
 				await bot.general_channel.send(embed=embed)
 				bot.state = 'clueing'
-				bot.countdown = 15
+				bot.countdown = 12
 				if correct:
 					bot.active_clues = []
 					bot.guess = bot.word[:len(bot.guess)+1]
@@ -67,6 +67,19 @@ async def check_contact():
 				else:
 					bot.active_clues.pop(int(contacted_clue)-1)
 					await bot.general_channel.send("All guesses don't match! Tough one")
+				if bot.word in bot.used_words:
+					giver = bot.giver
+					bot.giver = None
+					bot.word = None
+					bot.guess = None
+					bot.active_clues = []   #Contains list of cluer and clue
+					bot.used_words = set()
+					bot.num_contacts = 3
+					bot.countdown = 12
+					bot.state = 'clueing'
+					bot.contacted_clue = None
+					bot.valid_words = []
+					await bot.general_channel.send("And {}'s word was {}! GG! ".format(giver,bot.word))             					
 
 
 @bot.command()
@@ -123,6 +136,8 @@ async def clue(ctx,word,*args):
 		await ctx.send("No word in play")
 	elif bot.general_channel is None:
 		await ctx.send("No games running currently. You can start a game by sending '$start' on a shared channel")
+	elif len(args) == 0:
+		await ctx.send("Enter a clue please...")
 	elif bot.guess != word[:len(bot.guess)]:
 		await ctx.send("The word does not match current guess")
 	elif word in bot.used_words:
@@ -161,7 +176,7 @@ async def guess(ctx,clue,word):
 				bot.state = 'clueing'
 				bot.contacted_clue = None
 				bot.valid_words = []
-				await bot.general_channel.send("And {}'s word was {}! GG! ".format(giver,word))				
+				await bot.general_channel.send("And {}'s word was {}! GG! ".format(giver,word))             
 			elif bot.state=='countdown' and clue == bot.contacted_clue:
 				bot.contacted_clue = None
 				bot.state = 'clueing'
@@ -178,7 +193,9 @@ async def guess(ctx,clue,word):
 @bot.command()
 async def contact(ctx,clue,word):
 	word = word.lower()
-	if bot.giver == ctx.author:
+	if bot.state == 'contacting':
+		await ctx.send("Already contacting on another clue, please wait")
+	elif bot.giver == ctx.author:
 		await ctx.send("Only non-word giver can contact for clues. Use $guess instead")
 	elif ctx.author == bot.active_clues[int(clue)-1].cluer:
 		await ctx.send("You can't contact on your own clue!")
@@ -225,4 +242,4 @@ async def help(ctx):
 
 	await ctx.send(embed=embed)
 
-bot.run('NjkwOTc5Njc5NTUyNjY3NzM4')
+bot.run('NjkwOTc5Njc5NTUyNjY3NzM4.XnZXgA.bLji37ZPHkGBx6sBNMpFooxNhvU')
