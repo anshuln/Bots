@@ -6,8 +6,8 @@ import pickle
 SCOPES = ['https://mail.google.com/','https://www.googleapis.com/auth/presentations']
 # If there are no (valid) credentials available, let the user log in.
 flow = InstalledAppFlow.from_client_secrets_file(
-	'credentials.json', SCOPES)
+    'credentials.json', SCOPES)
 creds = flow.run_local_server(port=0)
 # Save the credentials for the next run
 with open('token.pickle', 'wb') as token:
-	pickle.dump(creds, token)
+    pickle.dump(creds, token)
