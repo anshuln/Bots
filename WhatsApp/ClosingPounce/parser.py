@@ -47,7 +47,7 @@ class Question():
 		elif mode=="keyword":
 			if keyword is None:
 				raise Exception("Are you sure you called the correct kw")
-			if keyword in split[0]:
+			if keyword in split[0].lower():
 				return True
 			else:
 				return False
@@ -91,7 +91,7 @@ def extract_messages(text,db,mode,keywordq=None,keyworda=None):
 	print(max_time)
 	file = open("Rejects.txt","w")
 
-	regex_pattern = re.compile(r'^(?P<day>\d{2})\/(?P<month>\d{2})\/(?P<year>\d{4})\, (?P<hour>\d{2})\:(?P<minute>\d{2}) \- (?P<QM>[\w\+ ]+)\: (?P<message>[\s\S]+?)(?=^\d{2}|\Z)',re.MULTILINE)
+	regex_pattern = re.compile(r'^(?P<day>\d{2})\/(?P<month>\d{2})\/(?P<year>\d{4})\, (?P<hour>\d{2})\:(?P<minute>\d{2}) \- (?P<QM>[\w\+ ]+)\: (?P<message>[\s\S]+?)(?=^\d{2}\/\d{2}\/\d{4}|\Z)',re.MULTILINE)
 	
 	messages  = regex_pattern.finditer(text)
 	msg_stack = []  #Stack ensures that multi-message questions are interpreted well enough
@@ -116,6 +116,7 @@ def extract_messages(text,db,mode,keywordq=None,keyworda=None):
 					# msg_stack.pop()
 				else:
 					msg_stack[-i].answer = q.message
+					print("Updating answer",q.message)
 					# print(msg_stack[-i].message,"\n",msg_stack[-1].answer)
 					msg_stack[-i].update_db(cursor)
 					msg_stack.pop(-i)
