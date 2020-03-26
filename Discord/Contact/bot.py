@@ -4,6 +4,13 @@ import time
 import asyncio
 # from nltk.stem.snowball import SnowballStemmer
 
+import logging
+
+logger = logging.getLogger('discord')
+logger.setLevel(logging.DEBUG)
+handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
+handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
+logger.addHandler(handler)
 
 bot = commands.Bot(command_prefix='$')
 bot.general_channel = None
@@ -79,7 +86,7 @@ async def check_contact():
 					bot.state = 'clueing'
 					bot.contacted_clue = None
 					bot.valid_words = []
-					await bot.general_channel.send("And {}'s word was {}! GG! ".format(giver,bot.word))             					
+					await bot.general_channel.send("And {}'s word was {}! GG! ".format(giver,bot.word))                                 
 
 
 @bot.command()
