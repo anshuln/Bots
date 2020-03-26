@@ -2,12 +2,12 @@ import discord
 from discord.ext import commands
 import time
 import asyncio
-# from nltk.stem.snowball import SnowballStemmer
+from nltk.stem.snowball import SnowballStemmer
 
 import logging
 
 logger = logging.getLogger('discord')
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
 handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
 logger.addHandler(handler)
@@ -200,7 +200,7 @@ async def guess(ctx,clue,word):
 @bot.command()
 async def contact(ctx,clue,word):
 	word = word.lower()
-	if bot.state == 'contacting':
+	if bot.state == 'countdown':
 		await ctx.send("Already contacting on another clue, please wait")
 	elif bot.giver == ctx.author:
 		await ctx.send("Only non-word giver can contact for clues. Use $guess instead")
@@ -249,4 +249,4 @@ async def help(ctx):
 
 	await ctx.send(embed=embed)
 
-bot.run('NjkwOTc5Njc5NTUyNjY3Nz')
+bot.run('NjkwOTc5Njc5NTUyNjY3NzM4.')
