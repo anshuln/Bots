@@ -24,6 +24,7 @@ bot.countdown = 12
 bot.state = 'clueing'
 bot.contacted_clue = None
 bot.valid_words = []
+bot.stemmer = SnowballStemmer("english")
 
 class Clue:
 	def __init__(self,cluer,clue,word):
@@ -60,9 +61,9 @@ async def check_contact():
 				embed = discord.Embed(title="Guesses for clue {}".format(contacted_clue))
 				for con in bot.active_clues[int(contacted_clue)-1].contacts.keys():
 					embed.add_field(name=con,value=bot.active_clues[int(contacted_clue)-1].contacts[con])
-					bot.used_words.add(bot.active_clues[int(contacted_clue)-1].contacts[con])
-					correct = correct and (bot.active_clues[int(contacted_clue)-1].contacts[con] == bot.active_clues[int(contacted_clue)-1].word)
-				bot.used_words.add(bot.active_clues[int(contacted_clue)-1].word)
+					bot.used_words.add(bot.stemmer.stem(bot.active_clues[int(contacted_clue)-1].contacts[con]))
+					correct = correct and (bot.stemmer.stem(bot.active_clues[int(contacted_clue)-1].contacts[con]) == bot.stemmer.stem(bot.active_clues[int(contacted_clue)-1].word))
+				bot.used_words.add(bot.stemmer.stem(bot.active_clues[int(contacted_clue)-1].word))
 				embed.add_field(name="Actual Word",value=bot.active_clues[int(contacted_clue)-1].word)
 				await bot.general_channel.send(embed=embed)
 				bot.state = 'clueing'
@@ -74,7 +75,7 @@ async def check_contact():
 				else:
 					bot.active_clues.pop(int(contacted_clue)-1)
 					await bot.general_channel.send("All guesses don't match! Tough one")
-				if bot.word in bot.used_words:
+				if bot.stemmer.stem(bot.word) in bot.used_words:
 					giver = bot.giver
 					bot.giver = None
 					bot.word = None
@@ -85,7 +86,8 @@ async def check_contact():
 					bot.countdown = 12
 					bot.state = 'clueing'
 					bot.contacted_clue = None
-					bot.valid_words = []
+					bot.valid_words = open("Words.txt").read().lower().split('\n')
+					# bot.valid_words = []
 					await bot.general_channel.send("And {}'s word was {}! GG! ".format(giver,bot.word))                                 
 
 
@@ -147,7 +149,7 @@ async def clue(ctx,word,*args):
 		await ctx.send("Enter a clue please...")
 	elif bot.guess != word[:len(bot.guess)]:
 		await ctx.send("The word does not match current guess")
-	elif word in bot.used_words:
+	elif bot.stemmer.stem(word) in bot.used_words:
 		await ctx.send("Word already used")
 	elif word.lower() not in bot.valid_words:
 		await ctx.send("This is not a word")
@@ -167,11 +169,11 @@ async def guess(ctx,clue,word):
 
 	else:
 		word = word.lower()
-		bot.used_words.add(word)
+		bot.used_words.add(bot.stemmer.stem(word))
 		message = "{} has guessed {} for clue {} ".format(ctx.author,word,clue)
-		if bot.active_clues[int(clue)-1].word == word:
+		if bot.stemmer.stem(bot.active_clues[int(clue)-1].word) == bot.stemmer.stem(word):
 			bot.active_clues.pop(int(clue)-1)
-			if bot.word == word:
+			if bot.stemmer.stem(bot.word) == bot.stemmer.stem(word):
 				giver = bot.giver
 				bot.giver = None
 				bot.word = None
@@ -182,7 +184,8 @@ async def guess(ctx,clue,word):
 				bot.countdown = 12
 				bot.state = 'clueing'
 				bot.contacted_clue = None
-				bot.valid_words = []
+				bot.valid_words = open("Words.txt").read().lower().split('\n')
+				# bot.valid_words = []
 				await bot.general_channel.send("And {}'s word was {}! GG! ".format(giver,word))             
 			elif bot.state=='countdown' and clue == bot.contacted_clue:
 				bot.contacted_clue = None
@@ -249,4 +252,4 @@ async def help(ctx):
 
 	await ctx.send(embed=embed)
 
-bot.run('NjkwOTc5Njc5NTUyNjY3NzM4.')
+bot.run('NjkwOTc5Njc5NTUyNjY3NzM')
